@@ -48,9 +48,7 @@ class ActionService:
         self.log = get_logger(service="action_service")
 
     def find_action(self, id_: ExecutableId) -> Optional[type[Action[Any, Any]]]:
-        if id_ in self.actions:
-            return self.actions[id_]
-        return None
+        return self.actions[id_] if id_ in self.actions else None
 
     def instantiate_action(
         self,
@@ -80,11 +78,7 @@ class ActionService:
         if isinstance(None, inputs_type):
             inputs = None
         else:
-            if action_inputs is None:
-                specified_inputs = {}
-            else:
-                specified_inputs = action_inputs
-
+            specified_inputs = {} if action_inputs is None else action_inputs
             input_values = {}
             for input_name, template in specified_inputs:
                 # resolve prompt contexts
@@ -119,10 +113,7 @@ class ActionService:
         inputs: Inputs,
         publish_service: PublishService,
     ):
-        if inputs is not None:
-            formatted_inputs = format_for_publishing(inputs)
-        else:
-            formatted_inputs = "None"
+        formatted_inputs = "None" if inputs is None else format_for_publishing(inputs)
         await publish_service.publish_code_block("Inputs", formatted_inputs, language="json")
 
         # Instantiate the action
@@ -214,11 +205,11 @@ class ActionService:
         action_type = self.actions[action_id]
 
         iteration = iter_action_config.iterate
+        coros = []
         if isinstance(iteration, int):
             # iterate `iteration` times
             item_name = iter_action_config.as_
             iter_context = context
-            coros = []
             for i in range(iteration):
                 if item_name is not None:
                     iter_context = ContextDict(iter_context | {item_name: i})
@@ -242,7 +233,6 @@ class ActionService:
             item_name = iter_action_config.as_
             if item_name is None:
                 raise ValueError("Expected `as` to be specified for action iterating over a list")
-            coros = []
             for item in list_var:
                 iter_context = ContextDict(context | {item_name: item})
                 inputs = self.get_action_inputs(action_type, iter_action_config.inputs, iter_context)
@@ -258,16 +248,11 @@ class ActionService:
         # Gather the action runs
         outputses = await asyncio.gather(*coros)
 
-        # Extract outputs
-        new_context = {}
-        for output_name, context_key in iter_action_config.list_outputs or {}:
-            if context_key is None:
-                continue
-            new_context[context_key] = [
-                getattr(outputs, output_name)
-                for outputs in outputses
-            ]
-
+        new_context = {
+            context_key: [getattr(outputs, output_name) for outputs in outputses]
+            for output_name, context_key in iter_action_config.list_outputs or {}
+            if context_key is not None
+        }
         await publish_service.publish_code_block(
             "Outputs",
             format_for_publishing(new_context),

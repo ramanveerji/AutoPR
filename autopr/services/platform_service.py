@@ -279,33 +279,31 @@ class GitHubPlatformService(PlatformService):
 
         async with ClientSession() as session:
             async with session.post(url, json=data, headers=headers) as response:
-                if response.status != 201:
-                    # if draft pull request is not supported
-                    if self._is_draft_error(await response.text()):
-                        del data['draft']
-                        async with session.post(url, json=data, headers=headers) as second_response:
-                            if second_response.status != 201:
-                                await self._log_failed_request(
-                                    'Failed to create pull request',
-                                    request_url=url,
-                                    request_headers=headers,
-                                    request_body=data,
-                                    response=second_response,
-                                )
-                                raise RuntimeError('Failed to create pull request')
-                            response_json = await second_response.json()
-                    else:
-                        await self._log_failed_request(
-                            'Failed to create pull request',
-                            request_url=url,
-                            request_headers=headers,
-                            request_body=data,
-                            response=response,
-                        )
-                        raise RuntimeError('Failed to create pull request')
-                else:
+                if response.status == 201:
                     response_json = await response.json()
 
+                elif self._is_draft_error(await response.text()):
+                    del data['draft']
+                    async with session.post(url, json=data, headers=headers) as second_response:
+                        if second_response.status != 201:
+                            await self._log_failed_request(
+                                'Failed to create pull request',
+                                request_url=url,
+                                request_headers=headers,
+                                request_body=data,
+                                response=second_response,
+                            )
+                            raise RuntimeError('Failed to create pull request')
+                        response_json = await second_response.json()
+                else:
+                    await self._log_failed_request(
+                        'Failed to create pull request',
+                        request_url=url,
+                        request_headers=headers,
+                        request_body=data,
+                        response=response,
+                    )
+                    raise RuntimeError('Failed to create pull request')
                 self.log.debug('Pull request created successfully',
                                headers=response.headers)
                 pr_number = response_json['number']
@@ -350,7 +348,7 @@ class GitHubPlatformService(PlatformService):
         return is_draft_error
 
     async def _get_pull_request_node_id(self, pr_number: int) -> str:
-        url = f'https://api.github.com/repos/{self.owner}/{self.repo_name}/pulls/{str(pr_number)}'
+        url = f'https://api.github.com/repos/{self.owner}/{self.repo_name}/pulls/{pr_number}'
         headers = self._get_headers()
 
         async with ClientSession() as session:
@@ -471,14 +469,11 @@ class GitHubPlatformService(PlatformService):
         comments_json = response.json()
         self.log.info("Got issue comments", comments=comments_json)
 
-        # Get body
-        comments_list = []
         body_message = Message(
             body=issue_json['body'] or "",
             author=issue_json['user']['login'],
         )
-        comments_list.append(body_message)
-
+        comments_list = [body_message]
         # Get comments
         for comment_json in comments_json:
             comment = Message(

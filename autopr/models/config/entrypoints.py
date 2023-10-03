@@ -33,13 +33,13 @@ def build_workflows():
         }
         if workflow.inputs is not None:
             input_fields_model = pydantic.create_model(
-                workflow_id + "Inputs",
+                f"{workflow_id}Inputs",
                 __base__=StrictModel,
                 __module__=__name__,
                 **{
                     name: (ValueDeclaration, Field(default=...))
                     for name in workflow.inputs
-                },  # pyright: ignore[reportGeneralTypeIssues]
+                },
             )
             input_fields = (input_fields_model, ...)
         else:
@@ -50,13 +50,13 @@ def build_workflows():
 
         if workflow.outputs is not None:
             output_fields_model = pydantic.create_model(
-                workflow_id + "Outputs",
+                f"{workflow_id}Outputs",
                 __base__=StrictModel,
                 __module__=__name__,
                 **{
                     name: (Optional[ContextVarName], Field(default=None))
                     for name in workflow.outputs
-                },  # pyright: ignore[reportGeneralTypeIssues]
+                },
             )
             output_fields = (output_fields_model, None)
         else:
@@ -70,19 +70,19 @@ def build_workflows():
 
         # build workflow invocation model
         workflow_basemodel = pydantic.create_model(
-            workflow_id + "WorkflowModel",
+            f"{workflow_id}WorkflowModel",
             __base__=WorkflowInvocation,
             __module__=__name__,
-            **invocation_fields,  # pyright: ignore[reportGeneralTypeIssues]
+            **invocation_fields,
         )
         workflow_models.append(workflow_basemodel)
 
         # build iterable workflow invocation model
         iterable_workflow_basemodel = pydantic.create_model(
-            workflow_id + "IterableWorkflowModel",
+            f"{workflow_id}IterableWorkflowModel",
             __base__=IterableWorkflowInvocation,
             __module__=__name__,
-            **iterable_invocation_fields,  # pyright: ignore[reportGeneralTypeIssues]
+            **iterable_invocation_fields,
         )
         workflow_models.append(iterable_workflow_basemodel)
 
@@ -129,11 +129,13 @@ class LabelTrigger(TriggerModel):
 
     def get_context_for_event(self, event: EventUnion) -> Optional[ContextDict]:
         if (
-            isinstance(event, LabelEvent) and
-            self.label_substring.lower() in event.label.lower() and
-            (
-                self.on_pull_request and event.pull_request is not None or
-                self.on_issue and not event.pull_request is not None
+            isinstance(event, LabelEvent)
+            and self.label_substring.lower() in event.label.lower()
+            and (
+                self.on_pull_request
+                and event.pull_request is not None
+                or self.on_issue
+                and event.pull_request is None
             )
         ):
             return ContextDict(

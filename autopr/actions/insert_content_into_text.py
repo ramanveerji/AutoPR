@@ -38,12 +38,11 @@ class InsertContentIntoText(Action[Inputs, Outputs]):
         delimiter_occurrences = file_content.count(delimiter)
         if delimiter_occurrences <= 1:
             # If there's no delimiter or only one delimiter, append the content at the end with delimiters.
-            return file_content + f"\n\n{delimiter}{content}{delimiter}"
-        else:
-            # If there are two or more delimiters, insert the content between the last two delimiters.
-            first_part, last_part = file_content.rsplit(delimiter, 1)
-            start_part, middle_part = first_part.rsplit(delimiter, 1)  # throw away the middle part
-            return f"{start_part}{delimiter}{content}{delimiter}{last_part}"
+            return f"{file_content}\n\n{delimiter}{content}{delimiter}"
+        # If there are two or more delimiters, insert the content between the last two delimiters.
+        first_part, last_part = file_content.rsplit(delimiter, 1)
+        start_part, middle_part = first_part.rsplit(delimiter, 1)  # throw away the middle part
+        return f"{start_part}{delimiter}{content}{delimiter}{last_part}"
 
 
     async def run(self, inputs: Inputs) -> Outputs:
