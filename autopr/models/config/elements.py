@@ -161,11 +161,11 @@ def build_actions():
     # for best typehints and autocompletion possible in the jsonschema
 
     def _templatify_model(
-        model: type[pydantic.BaseModel],
-        field_type: Optional[type] = None,
-        add_union: Optional[type] = None,
-        all_optional: bool = False
-    ) -> tuple[type[pydantic.BaseModel], Any]:
+            model: type[pydantic.BaseModel],
+            field_type: Optional[type] = None,
+            add_union: Optional[type] = None,
+            all_optional: bool = False
+        ) -> tuple[type[pydantic.BaseModel], Any]:
         # Create a new model, put in a field of "field_type" for each input
         template_fields = {}
         for name_, field_ in model.__fields__.items():
@@ -177,10 +177,7 @@ def build_actions():
                 type_ = type_._get_config_type()
 
             # Annotate optional fields with a default of None
-            if all_optional or not field_.required:
-                default = None
-            else:
-                default = ...
+            default = None if all_optional or not field_.required else ...
             template_field = Field(
                 default=default,
                 alias=field_.alias,
@@ -253,18 +250,18 @@ def build_actions():
 
         # build action invocation model
         action_basemodel = pydantic.create_model(
-            action.id + "ActionModel",
+            f"{action.id}ActionModel",
             __base__=ActionConfig,
             __module__=__name__,
-            **invocation_fields,  # pyright: ignore[reportGeneralTypeIssues]
+            **invocation_fields,
         )
         action_models.append(action_basemodel)
         # build iterable action invocation model
         iterable_action_basemodel = pydantic.create_model(
-            action.id + "IterableActionModel",
+            f"{action.id}IterableActionModel",
             __base__=IterableActionConfig,
             __module__=__name__,
-            **iterable_invocation_fields,  # pyright: ignore[reportGeneralTypeIssues]
+            **iterable_invocation_fields,
         )
         action_models.append(iterable_action_basemodel)
     return action_models

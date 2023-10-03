@@ -45,9 +45,9 @@ main = create_ephemeral_main_service(
     event=event,
 )
 
-triggers = asyncio.run(main.workflow_service._get_trigger_coros_for_event(event))
-
-if triggers:
+if triggers := asyncio.run(
+    main.workflow_service._get_trigger_coros_for_event(event)
+):
     # Run the first trigger you find
     out = asyncio.run(triggers[0])
 else:

@@ -6,9 +6,7 @@ import pydantic
 
 def truncate_strings(obj: Any, length: int = 100) -> Any:
     if isinstance(obj, str):
-        if len(obj) < length:
-            return obj
-        return obj[:length] + "... (truncated)"
+        return obj if len(obj) < length else f"{obj[:length]}... (truncated)"
     elif isinstance(obj, dict):
         return {key: truncate_strings(value) for key, value in obj.items()}
     elif isinstance(obj, list):
@@ -32,5 +30,4 @@ def format_for_publishing(obj: Any) -> str:
         dict_obj = {key: value for key, value in dict_obj.items()
                     if not (key.startswith("__") and key.endswith("__"))}
     truncated_dict_obj = truncate_strings(dict_obj)
-    dumped_json = json.dumps(truncated_dict_obj, indent=2)
-    return dumped_json
+    return json.dumps(truncated_dict_obj, indent=2)

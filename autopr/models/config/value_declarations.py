@@ -90,13 +90,12 @@ class ParamDeclaration(Variable):
     param: Param
 
     def render(self, context: ContextDict) -> Any:
-        if "__params__" not in context or self.param.name not in context["__params__"]:
-            if any(isinstance(self.param.default, t) for t in typing.get_args(ValueDeclaration)):
-                return self.param.default.render(context)  # type: ignore[reportGeneralTypeIssues]
-            else:
-                return context.render_nested_template(self.param.default)
-        else:
+        if "__params__" in context and self.param.name in context["__params__"]:
             return context["__params__"][self.param.name]
+        if any(isinstance(self.param.default, t) for t in typing.get_args(ValueDeclaration)):
+            return self.param.default.render(context)  # type: ignore[reportGeneralTypeIssues]
+        else:
+            return context.render_nested_template(self.param.default)
 
 
 ValueDeclaration = Union[TemplateDeclaration, VarDeclaration, ConstDeclaration, LambdaDeclaration, ParamDeclaration]

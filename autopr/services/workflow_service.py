@@ -46,7 +46,9 @@ class WorkflowService:
             return executable
         if isinstance(executable, ActionConfig):
             return executable.action
-        if isinstance(executable, WorkflowInvocation) or isinstance(executable, IterableWorkflowInvocation):
+        if isinstance(
+            executable, (WorkflowInvocation, IterableWorkflowInvocation)
+        ):
             return executable.workflow
         if isinstance(executable, ContextAction):
             raise RuntimeError("Meaningless trigger! Whatchu tryina do :)")
@@ -80,9 +82,13 @@ class WorkflowService:
             self.handle_trigger(
                 trigger,
                 context,
-                publish_service=(await self.publish_service.create_child(title=title)),
+                publish_service=(
+                    await self.publish_service.create_child(title=title)
+                ),
             )
-            for i, ((trigger, context), title) in enumerate(zip(triggers_and_context, trigger_titles))
+            for (trigger, context), title in zip(
+                triggers_and_context, trigger_titles
+            )
         ]
 
     async def trigger_event(
@@ -92,7 +98,7 @@ class WorkflowService:
         triggers = await self._get_trigger_coros_for_event(event)
         if not triggers:
             print(event)
-            self.log.debug(f"No triggers for event")
+            self.log.debug("No triggers for event")
             return
 
         results = await asyncio.gather(*triggers)
@@ -215,10 +221,7 @@ class WorkflowService:
 
         # Grab outputs
         output_context = ContextDict()
-        if workflow_invocation.outputs:
-            src = workflow_invocation.outputs.dict()
-        else:
-            src = {}
+        src = workflow_invocation.outputs.dict() if workflow_invocation.outputs else {}
         for output, varname in src.items():
             output_context[varname] = context[output]
 
@@ -237,11 +240,11 @@ class WorkflowService:
             raise ValueError("Executable is an action, not a workflow")
 
         iteration = iter_workflow_invocation.iterate
+        coros = []
         if isinstance(iteration, int):
             # iterate workflow `iteration` times
             item_name = iter_workflow_invocation.as_
             iter_context = context
-            coros = []
             for i in range(iteration):
                 # Prepare inputs
                 if item_name is not None:
@@ -267,7 +270,6 @@ class WorkflowService:
             if item_name is None:
                 raise ValueError("Expected `as` to be specified for workflow iterating over a list")
 
-            coros = []
             for item in list_var:
                 # Prepare inputs
                 iter_context = ContextDict(context | {item_name: item})
@@ -346,10 +348,7 @@ class WorkflowService:
         # Grab outputs
         output_context = ContextDict()
         for output in outputs:
-            if isinstance(output, str):
-                name = output
-            else:  # isinstance(output, VarSpec)
-                name = output.name
+            name = output if isinstance(output, str) else output.name
             output_context[name] = context[name]
 
         await publish_service.publish_code_block(
